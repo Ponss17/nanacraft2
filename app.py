@@ -77,7 +77,6 @@ def get_server_players():
         server = JavaServer.lookup(f"{SERVER_IP}:{SERVER_PORT}")
         status = server.status()
         
-        # Crear lista de nombres separados por comas
         players_string = ""
         if status.players.sample:
             players_names = [player.name for player in status.players.sample]
@@ -135,4 +134,5 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
 
     app.run(debug=False, host='0.0.0.0', port=port)
+
 
