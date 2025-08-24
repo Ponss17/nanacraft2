@@ -12,11 +12,11 @@ SERVER_PORT = 25615
 @app.route('/')
 def home():
     return jsonify({
-        "message": "API de información de servidor Minecraft",
+        "message": "API de información del servidor de NaNaCraft.",
         "endpoints": {
-            "/server/info": "Información general del servidor",
-            "/server/status": "Estado del servidor",
-            "/server/players": "Lista de jugadores conectados"
+            "/server/info": "Información general del servidor.",
+            "/server/status": "Estado del servidor.",
+            "/server/players": "Lista de jugadores conectados."
         }
     })
 
@@ -126,7 +126,7 @@ def ping_server():
         return jsonify({
             "success": False,
             "error": str(e),
-            "message": "Servidor no responde"
+            "message": "Servidor no responde."
         }), 500
 
 if __name__ == '__main__':
@@ -134,5 +134,6 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
 
     app.run(debug=False, host='0.0.0.0', port=port)
+
 
 
