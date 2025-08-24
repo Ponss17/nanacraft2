@@ -104,12 +104,11 @@ def get_players_list_only():
         server = JavaServer.lookup(f"{SERVER_IP}:{SERVER_PORT}")
         status = server.status()
         
-        # Devolver solo la cadena de jugadores
         if status.players.sample:
             players_names = [player.name for player in status.players.sample]
             return ",".join(players_names)
         else:
-            return ""  # Cadena vacía si no hay jugadores
+            return ""
     except Exception as e:
         return f"Error: {str(e)}", 500
 
@@ -136,3 +135,4 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
 
     app.run(debug=False, host='0.0.0.0', port=port)
+
