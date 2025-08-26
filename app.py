@@ -14,7 +14,7 @@ def home():
     return jsonify({
         "message": "API de información del servidor de NaNaCraft.",
         "endpoints": {
-            "/server/info": "Información general del servidor.",
+            "/server/info": "Información general de NaNaCraft.",
             "/server/status": "Estado del servidor.",
             "/server/players": "Lista de jugadores conectados."
         }
@@ -134,6 +134,7 @@ if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
 
     app.run(debug=False, host='0.0.0.0', port=port)
+
 
 
 
