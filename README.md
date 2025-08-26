@@ -2,20 +2,6 @@
 
 Esta API proporciona información en tiempo real del servidor de `NaNaCraft`.
 
-## Instalación
-
-1. Instala las dependencias:
-```bash
-pip install -r requirements.txt
-```
-
-2. Ejecuta la API:
-```bash
-python app.py
-```
-
-La API estará disponible en `http://localhost:5000`
-
 ## Endpoints Disponibles
 
 ### GET `/`
@@ -73,3 +59,4 @@ Si el servidor no está disponible o hay algún error, la API devuelve:
 }
 
 ```
+
