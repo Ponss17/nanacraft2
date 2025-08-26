@@ -1,6 +1,6 @@
-# API de Información de Servidor Minecraft
+# API de Información de NaNaCraft
 
-Esta API proporciona información en tiempo real del servidor de Minecraft ubicado en `23.230.3.73:25615`.
+Esta API proporciona información en tiempo real del servidor de `NaNaCraft`.
 
 ## Instalación
 
@@ -71,4 +71,5 @@ Si el servidor no está disponible o hay algún error, la API devuelve:
   "error": "Descripción del error",
   "message": "Mensaje explicativo"
 }
+
 ```
