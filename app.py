@@ -16,7 +16,8 @@ def home():
         "endpoints": {
             "/server/info": "Información general de NaNaCraft.",
             "/server/status": "Estado del servidor.",
-            "/server/players": "Lista de jugadores conectados."
+            "/server/players": "Lista de jugadores conectados.",
+            "/server/ping": "Realiza un ping al servidor"
         }
     })
 
@@ -138,4 +139,5 @@ if __name__ == '__main__':
 
 
 #vivan las chichonas
+
 
