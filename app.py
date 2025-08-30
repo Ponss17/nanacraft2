@@ -6,6 +6,8 @@ import os
 from functools import wraps
 import time
 from threading import Lock
+import signal
+from contextlib import contextmanager
 
 app = Flask(__name__)
 CORS(app)
@@ -19,6 +21,19 @@ RCON_HOST = SERVER_IP
 RCON_PORT = int(os.environ.get('RCON_PORT', 25575))
 RCON_PASSWORD = os.environ.get('RCON_PASSWORD', 'default_password')
 
+@contextmanager
+def timeout_handler(seconds):
+    def timeout_signal(signum, frame):
+        raise TimeoutError(f"Operation timed out after {seconds} seconds")
+    
+    old_handler = signal.signal(signal.SIGALRM, timeout_signal)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old_handler)
+
 class CacheManager:
     def __init__(self):
         self.players_cache = {}
@@ -26,7 +41,7 @@ class CacheManager:
         self.rcon_request_count = 0
         self.last_reset_time = time.time()
         self.CACHE_DURATION = 60
-        self.MAX_RCON_REQUESTS_PER_MINUTE = 10
+        self.MAX_RCON_REQUESTS_PER_MINUTE = 5
     
     def rate_limit_rcon(self):
         with self.cache_lock:
@@ -53,9 +68,13 @@ class CacheManager:
                 if player_name in self.players_cache:
                     return self.players_cache[player_name]['data']
                 else:
-                    return {"error": "Rate limit excedido, intenta más tarde"}
+                    return {"error": "Rate limit excedido"}
             
-            essentials_data = self._get_player_essentials_data_direct(player_name)
+            try:
+                with timeout_handler(3):
+                    essentials_data = self._get_player_essentials_data_direct(player_name)
+            except TimeoutError:
+                essentials_data = {"error": "RCON timeout"}
             
             self.players_cache[player_name] = {
                 'data': essentials_data,
@@ -66,11 +85,10 @@ class CacheManager:
     
     def _get_player_essentials_data_direct(self, player_name):
         try:
-            with MCRcon(RCON_HOST, RCON_PASSWORD, port=RCON_PORT, timeout=5) as mcr:
+            with MCRcon(RCON_HOST, RCON_PASSWORD, port=RCON_PORT, timeout=2) as mcr:
                 commands = {
                     "balance": f"bal {player_name}",
-                    "playtime": f"playtime {player_name}",
-                    "last_seen": f"seen {player_name}"
+                    "playtime": f"playtime {player_name}"
                 }
                 
                 player_data = {}
@@ -91,7 +109,14 @@ def handle_server_errors(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
-            return f(*args, **kwargs)
+            with timeout_handler(10):
+                return f(*args, **kwargs)
+        except TimeoutError:
+            return jsonify({
+                "success": False,
+                "error": "Request timeout",
+                "message": f"La consulta a {SERVER_NAME} tardó demasiado"
+            }), 504
         except Exception as e:
             return jsonify({
                 "success": False,
@@ -116,18 +141,15 @@ def format_players(players_sample):
             "avatar": {
                 "small": f"https://crafatar.com/avatars/{player.id}?size=32",
                 "medium": f"https://crafatar.com/avatars/{player.id}?size=64",
-                "large": f"https://crafatar.com/avatars/{player.id}?size=128",
-                "head_3d": f"https://crafatar.com/renders/head/{player.id}?size=64",
-                "body_3d": f"https://crafatar.com/renders/body/{player.id}?size=64"
-            },
-            "skin": {
-                "url": f"https://crafatar.com/skins/{player.id}",
-                "cape_url": f"https://crafatar.com/capes/{player.id}"
+                "large": f"https://crafatar.com/avatars/{player.id}?size=128"
             }
         }
         
-        essentials_data = cache_manager.get_cached_player_data(player.name)
-        player_info["essentials"] = essentials_data
+        try:
+            essentials_data = cache_manager.get_cached_player_data(player.name)
+            player_info["essentials"] = essentials_data
+        except Exception:
+            player_info["essentials"] = {"error": "Datos no disponibles"}
         
         players_list.append(player_info)
     
@@ -145,14 +167,10 @@ def home():
         "endpoints": {
             "/server/info": "Información completa del servidor",
             "/server/status": "Estado básico del servidor",
-            "/server/players": "Lista completa de jugadores (detallada y simple)",
+            "/server/players": "Lista completa de jugadores",
             "/server/ping": "Latencia del servidor"
         },
-        "features": {
-            "cache": "Sistema de caché optimizado (60s)",
-            "rate_limit": "Máximo 10 requests RCON por minuto",
-            "essentials": "Integración con EssentialsX"
-        }
+        "status": "online"
     })
 
 @app.route('/server/info')
@@ -171,7 +189,6 @@ def get_server_info():
             "protocol": status.version.protocol,
             "description": status.description,
             "latency": status.latency,
-            "favicon": status.favicon,
             "players": {
                 "online": status.players.online,
                 "max": status.players.max,
@@ -240,8 +257,18 @@ def not_found(error):
         "server": SERVER_NAME
     }), 404
 
+@app.errorhandler(504)
+def gateway_timeout(error):
+    return jsonify({
+        "success": False,
+        "error": "Gateway timeout",
+        "message": "El servidor tardó demasiado en responder",
+        "server": SERVER_NAME
+    }), 504
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
     
 #Vivan las chichonas :)
+
