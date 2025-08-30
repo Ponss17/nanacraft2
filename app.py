@@ -35,7 +35,11 @@ def format_players(players_sample):
     return [{
         "name": player.name,
         "uid": player.id,
-        "avatar": f"https://crafatar.com/avatars/{player.id}?size=64"
+        "avatar": {
+            "small": f"https://crafatar.com/avatars/{player.id}?size=32",
+            "medium": f"https://crafatar.com/avatars/{player.id}?size=64",
+            "large": f"https://crafatar.com/avatars/{player.id}?size=128"
+        }
     } for player in players_sample]
 
 @app.route('/')
@@ -119,9 +123,15 @@ def get_players_list_only():
     server = get_server()
     status = server.status()
     
-    if status.players.sample:
-        return ",".join(player.name for player in status.players.sample)
-    return ""
+    players_names = [player.name for player in status.players.sample] if status.players.sample else []
+    
+    return jsonify({
+        "success": True,
+        "server_name": SERVER_NAME,
+        "players_count": len(players_names),
+        "players_list": players_names,
+        "players_string": ",".join(players_names) if players_names else "No hay jugadores conectados"
+    })
 
 @app.route('/server/ping')
 @handle_server_errors
@@ -148,7 +158,5 @@ def not_found(error):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
-
-
+    
 #Vivan las chichonas :)
-
