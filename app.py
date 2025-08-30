@@ -22,7 +22,6 @@ def response(success: bool, data=None, error=None, status_code=200):
         "error": error
     }), status_code
 
-# Cache simple para status (5s)
 cache = {"last_check": 0, "status": None}
 
 def get_status_cached():
@@ -153,3 +152,4 @@ def ping_server():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
+
