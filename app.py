@@ -1,11 +1,8 @@
 from flask import Flask, jsonify
 from flask_cors import CORS
 from mcstatus import JavaServer
-from mcrcon import MCRcon
 import os
 from functools import wraps
-import time
-from threading import Lock
 import signal
 from contextlib import contextmanager
 
@@ -16,10 +13,6 @@ SERVER_IP = "23.230.3.73"
 SERVER_PORT = 25615
 SERVER_ADDRESS = f"{SERVER_IP}:{SERVER_PORT}"
 SERVER_NAME = "NaNaCraft2"
-
-RCON_HOST = SERVER_IP
-RCON_PORT = int(os.environ.get('RCON_PORT', 25575))
-RCON_PASSWORD = os.environ.get('RCON_PASSWORD', 'default_password')
 
 @contextmanager
 def timeout_handler(seconds):
@@ -33,77 +26,6 @@ def timeout_handler(seconds):
     finally:
         signal.alarm(0)
         signal.signal(signal.SIGALRM, old_handler)
-
-class CacheManager:
-    def __init__(self):
-        self.players_cache = {}
-        self.cache_lock = Lock()
-        self.rcon_request_count = 0
-        self.last_reset_time = time.time()
-        self.CACHE_DURATION = 60
-        self.MAX_RCON_REQUESTS_PER_MINUTE = 5
-    
-    def rate_limit_rcon(self):
-        with self.cache_lock:
-            current_time = time.time()
-            if current_time - self.last_reset_time > 60:
-                self.rcon_request_count = 0
-                self.last_reset_time = current_time
-            
-            if self.rcon_request_count >= self.MAX_RCON_REQUESTS_PER_MINUTE:
-                return False
-            
-            self.rcon_request_count += 1
-            return True
-    
-    def get_cached_player_data(self, player_name):
-        with self.cache_lock:
-            current_time = time.time()
-            
-            if (player_name in self.players_cache and 
-                current_time - self.players_cache[player_name]['timestamp'] < self.CACHE_DURATION):
-                return self.players_cache[player_name]['data']
-            
-            if not self.rate_limit_rcon():
-                if player_name in self.players_cache:
-                    return self.players_cache[player_name]['data']
-                else:
-                    return {"error": "Rate limit excedido"}
-            
-            try:
-                with timeout_handler(3):
-                    essentials_data = self._get_player_essentials_data_direct(player_name)
-            except TimeoutError:
-                essentials_data = {"error": "RCON timeout"}
-            
-            self.players_cache[player_name] = {
-                'data': essentials_data,
-                'timestamp': current_time
-            }
-            
-            return essentials_data
-    
-    def _get_player_essentials_data_direct(self, player_name):
-        try:
-            with MCRcon(RCON_HOST, RCON_PASSWORD, port=RCON_PORT, timeout=2) as mcr:
-                commands = {
-                    "balance": f"bal {player_name}",
-                    "playtime": f"playtime {player_name}"
-                }
-                
-                player_data = {}
-                for key, command in commands.items():
-                    try:
-                        response = mcr.command(command)
-                        player_data[key] = response
-                    except Exception:
-                        player_data[key] = "No disponible"
-                
-                return player_data
-        except Exception as e:
-            return {"error": f"RCON no disponible: {str(e)}"}
-
-cache_manager = CacheManager()
 
 def handle_server_errors(f):
     @wraps(f)
@@ -132,28 +54,21 @@ def format_players(players_sample):
     if not players_sample:
         return []
     
-    players_list = []
-    for player in players_sample:
-        player_info = {
-            "name": player.name,
-            "uid": player.id,
-            "display_name": player.name,
-            "avatar": {
-                "small": f"https://crafatar.com/avatars/{player.id}?size=32",
-                "medium": f"https://crafatar.com/avatars/{player.id}?size=64",
-                "large": f"https://crafatar.com/avatars/{player.id}?size=128"
-            }
+    return [{
+        "name": player.name,
+        "uid": player.id,
+        "avatar": {
+            "small": f"https://crafatar.com/avatars/{player.id}?size=32",
+            "medium": f"https://crafatar.com/avatars/{player.id}?size=64",
+            "large": f"https://crafatar.com/avatars/{player.id}?size=128",
+            "head_3d": f"https://crafatar.com/renders/head/{player.id}?size=64",
+            "body_3d": f"https://crafatar.com/renders/body/{player.id}?size=64"
+        },
+        "skin": {
+            "url": f"https://crafatar.com/skins/{player.id}",
+            "cape_url": f"https://crafatar.com/capes/{player.id}"
         }
-        
-        try:
-            essentials_data = cache_manager.get_cached_player_data(player.name)
-            player_info["essentials"] = essentials_data
-        except Exception:
-            player_info["essentials"] = {"error": "Datos no disponibles"}
-        
-        players_list.append(player_info)
-    
-    return players_list
+    } for player in players_sample]
 
 @app.route('/')
 def home():
@@ -169,8 +84,7 @@ def home():
             "/server/status": "Estado básico del servidor",
             "/server/players": "Lista completa de jugadores",
             "/server/ping": "Latencia del servidor"
-        },
-        "status": "online"
+        }
     })
 
 @app.route('/server/info')
@@ -189,6 +103,7 @@ def get_server_info():
             "protocol": status.version.protocol,
             "description": status.description,
             "latency": status.latency,
+            "favicon": status.favicon,
             "players": {
                 "online": status.players.online,
                 "max": status.players.max,
@@ -269,6 +184,5 @@ def gateway_timeout(error):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(debug=False, host='0.0.0.0', port=port)
-    
-#Vivan las chichonas :)
 
+##Vivan las chichonas :)
