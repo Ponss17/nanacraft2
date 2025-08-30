@@ -1,5 +1,4 @@
 Flask==2.3.3
 flask-cors==4.0.0
 mcstatus==11.0.0
-mcrcon==0.7.0
 gunicorn==21.2.0
