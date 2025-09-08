@@ -9,8 +9,8 @@ from contextlib import contextmanager
 app = Flask(__name__)
 CORS(app)
 
-SERVER_IP = "23.230.3.73"
-SERVER_PORT = 25615
+SERVER_IP = "23.230.3.74"
+SERVER_PORT = 25770
 SERVER_ADDRESS = f"{SERVER_IP}:{SERVER_PORT}"
 SERVER_NAME = "NaNaCraft2"
 
@@ -186,3 +186,4 @@ if __name__ == '__main__':
     app.run(debug=False, host='0.0.0.0', port=port)
 
 ##Vivan las chichonas :)
+
